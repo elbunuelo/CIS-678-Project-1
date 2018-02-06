@@ -1,5 +1,11 @@
-#! /usr/local/bin/python3
+'''
+GVSU CIS-678 Project 1
 
+Multilayer perceptron implementation usung numpy.
+
+This file contains the implementation of the multilayer perceptron as a class
+which can have all of its parameters passed in externally.
+'''
 import numpy as np
 
 
@@ -8,6 +14,10 @@ class NeuralNetwork:
     VALIDATION = 1
     TESTING = 2
 
+    '''
+    Class constructor which receives all of the multilayer perceptron
+    parameters and initializes all of its internal structure.
+    '''
     def __init__(self, all_train_data, test_data,
             number_of_hidden_nodes, number_of_outputs, eta,
             validation_data_proportion, validation_threshold):
@@ -16,6 +26,7 @@ class NeuralNetwork:
         self.number_of_outputs = number_of_outputs
         self.all_train_data = all_train_data
         self.test_data = test_data
+        self.validation_threshold = validation_threshold
 
         all_data_length = self.all_train_data.shape[0]
         number_of_inputs = self.all_train_data.shape[1] - 1
@@ -45,12 +56,14 @@ class NeuralNetwork:
 
         self.test_results = np.zeros(self.test_data.shape[0], dtype=bool)
 
-        self.validation_threshold = validation_threshold
+    '''
+    Returns the target output vector for a specific test or training case
 
-    def get_targets(self, element=None, label=None):
-            #Target
-            if not label:
-                label = int(element[0])
+    This method produces an array full of zeros of size equal to the number
+    of outputs and sets the position that corresponds to the label to one.
+    '''
+    def get_targets(self, element, label=None):
+            label = int(element[0])
 
             #Dimensions o x 1
             targets = np.zeros(self.number_of_outputs)
@@ -58,6 +71,12 @@ class NeuralNetwork:
 
             return targets
 
+    '''
+    Forwards the inputs through the hiden layer and produces the outputs.
+
+    This method uses the sigmoid function 1/(1+ exp(-sigma)) as an activation
+    function for both the neurons in the hidden layer and the output layer.
+    '''
     def forward(self):
             #Forward inputs to hidden layer
             sigma = np.dot(self.input_neurons, self.input_hidden_weights)
@@ -74,6 +93,10 @@ class NeuralNetwork:
             # Dimensions 1 x o
             self.outputs = 1/(1 + np.exp(-sigma))
 
+    '''
+    Back propagates the errors and adjusts the weights for the hidden and input
+    layers.
+    '''
     def back_propagate(self, targets):
             # Output Error Ey = y(1-y)(t-y)
             # Dimensions 1 x o
@@ -92,6 +115,12 @@ class NeuralNetwork:
             self.input_hidden_weights += self.eta * (self.input_neurons.T * hidden_errors)
             self.hidden_output_weights += self.eta * (self.hidden_neurons.T * output_errors)
 
+    '''
+    Checks if the output matches the label for a test case
+
+    The result is stored in a test_results array which is later used to compute
+    the accuracy rate of the neural network.
+    '''
     def check_output(self, test_element, i):
         result = self.outputs.argmax()
         expected = test_element[0]
@@ -117,6 +146,9 @@ class NeuralNetwork:
                 self.check_output(element, i)
 
 
+    '''
+    Generates the training and validation arrays to be used in an iteration
+    '''
     def get_iteration_data(self):
         np.random.shuffle(self.all_train_data)
         validation_data = self.all_train_data[self.training_dataset_length:,:]
@@ -127,6 +159,13 @@ class NeuralNetwork:
                 'validation': validation_data
                 }
 
+    '''
+    Checks if the difference in the two last validation errors meets the
+    validation threshold passed as a parameter.
+
+    The result of this method will be used to determine early termination of
+    the training process to avoid overfitting
+    '''
     def check_validation_errors(self, errors, i):
         if (i < 2):
             return False
@@ -139,6 +178,10 @@ class NeuralNetwork:
         return (previous - current) <= threshold and (two_before - previous) <= threshold
 
 
+    '''
+    Uses the training data to run the multi layer perceptron algorithm for
+    a number of iterations or until the early termination criteria is reached.
+    '''
     def learn(self, iterations):
         sum_square_errors_training = np.zeros(iterations)
         sum_square_errors_validation = np.zeros(iterations)
@@ -157,6 +200,9 @@ class NeuralNetwork:
 
         self.run(self.test_data, self.TESTING)
 
+    '''
+    Returns the success rate of the neural network as a decimal
+    '''
     def get_success_rate(self):
         return np.sum(self.test_results)/self.test_results.shape[0]
 
